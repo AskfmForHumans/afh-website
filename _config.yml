@@ -1,0 +1,5 @@
+description: "AskfmForHumans - The Salvation Army for ASKfm."
+
+plugins:
+  - "jekyll-seo-tag"
+  - "jemoji"

@@ -1,0 +1,138 @@
+/* CSS reset */
+
+body,
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  border: none;
+  outline: none;
+  padding: 0;
+}
+
+/* Global styles */
+
+body {
+  background: #131619;
+  font-family: ProximaNova, sans-serif;
+}
+
+main {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+[class^="icon"],
+[class*=" icon"] {
+  font-family: "fontello";
+}
+
+mark {
+  all: unset;
+  text-decoration: underline;
+}
+
+h1 {
+  font-size: 1.2em;
+}
+
+.flex {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.col {
+  flex-direction: column;
+}
+
+/* Form */
+
+.panel {
+  padding: 1em;
+  background: black;
+  color: white;
+  margin-bottom: 1em;
+  border-radius: 0 0 0.7em 0.7em;
+}
+
+.field {
+  background: white;
+  color: black;
+  padding: 0.7em;
+  border-radius: 0.5em;
+}
+
+.field input {
+  width: 100%;
+}
+
+button {
+  background: #ee1144;
+  border-radius: 0.5em;
+  padding: 0.7em;
+  min-width: 5em;
+}
+
+.icon-submit::before {
+  content: "\ea60";
+}
+
+.busy .icon-submit::before {
+  content: "\e830";
+}
+
+#message {
+  min-width: 0;
+  overflow-wrap: break-word;
+  font-size: 0.9em;
+  align-self: center;
+}
+
+#message a,
+#message.error {
+  color: #ee1144;
+}
+
+@media (min-width: 500px) {
+  #message br {
+    display: none;
+  }
+}
+
+/* External resources */
+
+@font-face {
+  font-family: "fontello";
+  src: url(https://gistcdn.githack.com/snowwm/555980d5aab39be79d2b2d684c636672/raw/fontello.woff2)
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ProximaNova";
+  src: url(https://gistcdn.githack.com/snowwm/555980d5aab39be79d2b2d684c636672/raw/proximanova-regular.woff2)
+    format("woff2");
+  font-weight: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ProximaNova";
+  src: url(https://gistcdn.githack.com/snowwm/555980d5aab39be79d2b2d684c636672/raw/proximanova-semibold.woff2)
+    format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
