@@ -12,7 +12,7 @@
 <body>
   <main>
     <section class="panel">
-      <form class="flex col" id="form" name="form" autocomplete="on">
+      <form class="flex col" id="form">
         <h1>
           Найдём все ответы <mark>user1</mark> на вопросы от <mark>user2</mark>, содержащие <mark>text</mark>:
         </h1>
@@ -23,7 +23,7 @@
           <input type="text" pattern="@?[a-zA-Z0-9_]+" placeholder="@user2 (можно оставить пустым)" name="who" autocomplete="username" />
         </div>
         <div class="field">
-          <input type="search" placeholder="text (можно оставить пустым)" name="what" autocomplete="on" />
+          <input type="search" placeholder="text (можно оставить пустым)" name="what" />
         </div>
         <div class="flex">
           <p id="message">

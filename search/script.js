@@ -1,23 +1,29 @@
-// TODO: dig into autocomplete
-
 const HOST = "https://ask.fm";
 const CORS_PROXY = "https://cors-proxy.snowwm.workers.dev?url=";
 
+let gAbortController = new AbortController();
+let gNumFetched = 0,
+  gNumShown = 0;
+
+// Setup the form.
 const MESSAGE_ELEM = document.querySelector("#message");
 const FORM_ELEM = document.querySelector("#form");
+FORM_ELEM.onsubmit = handleClick;
+// Prefill the form.
+const _loc = new URL(window.location.href);
+_loc.searchParams.forEach((val, name) =>
+  FORM_ELEM.elements[name] ?.setAttribute("value", val));
+// Remove params from the URL bar.
+_loc.search = "";
+window.history.replaceState(null, "", _loc);
 
+// Create shadow DOM for results.
 const _shadow = document
   .querySelector("#results")
   .attachShadow({ mode: "open" });
 const _tmpl = document.querySelector("#shadowTemplate");
 _shadow.append(_tmpl.content.cloneNode(true));
 const RESULTS_ELEM = _shadow.querySelector("#results");
-
-let gAbortController = new AbortController();
-let gNumFetched = 0,
-  gNumShown = 0;
-
-FORM_ELEM.onsubmit = handleClick;
 
 function handleClick(event) {
   event.preventDefault();
@@ -30,17 +36,17 @@ function handleClick(event) {
 }
 
 async function startSearch() {
-  // Abort previous search and clean up
+  // Abort previous search and clean up.
   abortSearch();
   RESULTS_ELEM.replaceChildren();
   gNumFetched = gNumShown = 0;
 
-  // Collect input data
+  // Collect input data.
   const where = FORM_ELEM.elements.where.value.replace("@", "");
   const who = FORM_ELEM.elements.who.value.replace("@", "");
   const what = FORM_ELEM.elements.what.value.trim();
 
-  // Prepare
+  // Prepare.
   gAbortController = new AbortController();
   FORM_ELEM.classList.add("busy");
   FORM_ELEM.setAttribute("novalidate", true);
