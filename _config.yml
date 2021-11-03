@@ -1,4 +1,6 @@
-description: "AskfmForHumans - The Salvation Army for ASKfm."
+lang: "ru-RU"
+title: "#AskfmForHumans"
+description: "The Salvation Army for ASKfm."
 
 plugins:
   - "jekyll-seo-tag"
