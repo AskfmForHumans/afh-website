@@ -1,6 +1,7 @@
 lang: "ru-RU"
 title: "#AskfmForHumans"
-description: "The Salvation Army for ASKfm."
+description: "Армия спасения ASKfm."
+footer_text: "This site's source on GitHub"
 
 plugins:
   - "jekyll-seo-tag"
