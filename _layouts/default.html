@@ -13,12 +13,13 @@
   
   <body>
     <div class="container-lg px-3 my-5 markdown-body">
-      {% if site.title and site.title != page.title %}
-      <h1 class="centered"><a href="{{ "/" | absolute_url }}">{{ site.title }}</a></h1>
-      {% endif %}
+      <div class="centered">
+        <h1><a href="{{ "/" | absolute_url }}">{{ site.title }}</a></h1>
+      </div>
 
       {{ content }}
       
+      <hr>
       <div id="vk_comments"></div>
 
       <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
