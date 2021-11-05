@@ -22,5 +22,6 @@
 
 ## Полезные ссылки
 
-- [юзерскрипт](https://afh.snowwm.ml/userjs/1coin) для отправки монет ASKfm по 1 (а не по 5)
+- [исходный код](https://github.com/AskfmForHumans/user.js/blob/main/themes.user.js) на Гитхабе
 - проект [#AskfmForHumans](https://afh.snowwm.ml/)
+- [юзерскрипт](https://afh.snowwm.ml/userjs/1coin) для отправки монет ASKfm по 1 (а не по 5)
