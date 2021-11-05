@@ -22,5 +22,6 @@
 
 ## Полезные ссылки
 
-- [юзерскрипт](https://afh.snowwm.ml/userjs/themes) для выбора из 18 цветовых тем, ранее доступных на ASKfm
+- [исходный код](https://github.com/AskfmForHumans/user.js/blob/main/1coin.user.js) на Гитхабе
 - проект [#AskfmForHumans](https://afh.snowwm.ml/)
+- [юзерскрипт](https://afh.snowwm.ml/userjs/themes) для выбора из 18 цветовых тем, ранее доступных на ASKfm
