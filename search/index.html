@@ -1,46 +1,81 @@
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="utf-8" />
+    <title>afh_search: поиск ответов на ASKfm</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="style.css" rel="stylesheet" type="text/css" />
+    <script src="script.js" defer></script>
+  </head>
 
-<head>
-  <meta charset="utf-8">
-  <title>AskfmForHumans search</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="style.css" rel="stylesheet" type="text/css" />
-  <script src="script.js" defer></script>
-</head>
+  <body>
+    <div id="browserWarning" hidden>
+      <h1>Упс… Ваш браузер устарел или не поддерживается. Сайт может работать некорректно :(</h1>
+    </div>
+    <main>
+      <section class="panel">
+        <form class="flex col" id="form" novalidate>
+          <h1>
+            Найдём все ответы <mark title="Юзернейм, с '@' или без.">user1</mark> на вопросы от
+            <mark title="Юзернейм, с '@' или без.">user2</mark>, содержащие
+            <mark title="Заданный текст ищется в ответах и вопросах (без учёта регистра).">text</mark>:
+          </h1>
+          <div class="form-row">
+            <div class="field username">
+              <input
+                type="text"
+                pattern="@?[a-zA-Z0-9_]+"
+                required
+                placeholder="@user1"
+                name="where"
+                autocomplete="username"
+              />
+            </div>
+            <div class="field username">
+              <input
+                type="text"
+                pattern="@?[a-zA-Z0-9_]+"
+                placeholder="@user2 (необязательно)"
+                name="who"
+                autocomplete="username"
+              />
+            </div>
+          </div>
+          <div class="field resize">
+            <input type="search" placeholder="text (необязательно)" name="what" />
+          </div>
+          <details>
+            <summary>
+              <span>Диапазон дат</span>
+            </summary>
+            <div class="form-row">
+              <div class="field">
+                <input type="date" name="dateFrom" />
+              </div>
+              <div class="field">
+                <input type="date" name="dateTo" />
+              </div>
+            </div>
+          </details>
+          <div class="flex">
+            <p id="message">
+              ASKfm answer search <br />
+              by <a href="https://ask.fm/ask4humans">@ask4humans</a>
+            </p>
+            <button type="submit" class="icon-submit"></button>
+          </div>
+        </form>
+      </section>
+      <section id="results"></section>
+    </main>
 
-<body>
-  <main>
-    <section class="panel">
-      <form class="flex col" id="form">
-        <h1>
-          Найдём все ответы <mark>user1</mark> на вопросы от <mark>user2</mark>, содержащие <mark>text</mark>:
-        </h1>
-        <div class="field">
-          <input type="text" pattern="@?[a-zA-Z0-9_]+" required placeholder="@user1" name="where" autocomplete="username" />
-        </div>
-        <div class="field">
-          <input type="text" pattern="@?[a-zA-Z0-9_]+" placeholder="@user2 (можно оставить пустым)" name="who" autocomplete="username" />
-        </div>
-        <div class="field">
-          <input type="search" placeholder="text (можно оставить пустым)" name="what" />
-        </div>
-        <div class="flex">
-          <p id="message">
-            ASKfm answer search <br />
-            by <a href="https://ask.fm/ask4humans">@ask4humans</a>
-          </p>
-          <button type="submit" class="icon-submit"></button>
-        </div>
-      </form>
-    </section>
-    <section id="results"></section>
-  </main>
-
-  <template id="shadowTemplate">
-    <link href="https://gistcdn.githack.com/snowwm/555980d5aab39be79d2b2d684c636672/raw/style.css" rel="stylesheet" type="text/css" />
-    <div id="results"></div>
-  </template>
-</body>
-
+    <template id="shadowTemplate">
+      <link
+        href="https://gistcdn.githack.com/snowwm/555980d5aab39be79d2b2d684c636672/raw/style.css"
+        rel="stylesheet"
+        type="text/css"
+      />
+      <div id="results"></div>
+    </template>
+  </body>
 </html>
