@@ -72,7 +72,7 @@ function syncUrlToForm(url) {
       // Open the spoler if there's one and the value is valid.
       // Assume there are no nested spoilers.
       const spoiler = el.closest("#form details");
-      if (spoiler) spoiler.open = !!el.value;
+      if (spoiler && el.value) spoiler.open = true;
     }
   }
 
