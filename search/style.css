@@ -29,6 +29,7 @@ select {
 body {
   background: #131619;
   font-family: ProximaNova, sans-serif;
+  overflow-wrap: break-word;
 }
 
 #browserWarning {
@@ -53,15 +54,20 @@ h1 {
 
 mark {
   all: unset;
-  text-decoration: underline;
+  border-bottom: 1px dotted;
 }
 
 mark[title] {
   cursor: help;
 }
 
+mark:hover {
+  color: #ee1144;
+}
+
 .flex {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 1em;
 }
@@ -70,9 +76,18 @@ mark[title] {
   flex-direction: column;
 }
 
+.flex > * {
+  flex: auto;
+}
+
+.nogrow > * {
+  flex: initial;
+}
+
 /* Spoilers */
 
 summary {
+  display: inline-block;
   cursor: pointer;
   padding-left: 1.1em;
   position: relative;
@@ -98,14 +113,6 @@ details[open] > summary::before {
   transform: rotate(0deg);
 }
 
-summary span {
-  border-bottom: 1px dotted;
-}
-
-summary:hover {
-  color: #ee1144;
-}
-
 /* Main form */
 
 .panel {
@@ -122,10 +129,6 @@ summary:hover {
   gap: 1em;
 }
 
-.form-row > * {
-  flex: 1;
-}
-
 .field {
   background: white;
   color: black;
@@ -140,6 +143,7 @@ summary:hover {
 
 .username {
   min-width: 200px;
+  flex-basis: 200px; /* Chrome worls correctly without this ¯\_(ツ)_/¯ */
 }
 
 .resize {
@@ -164,8 +168,6 @@ button {
 }
 
 #message {
-  min-width: 0;
-  overflow-wrap: break-word;
   font-size: 0.9em;
   align-self: center;
 }
