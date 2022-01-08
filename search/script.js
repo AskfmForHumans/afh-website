@@ -19,6 +19,7 @@ const FILTERS = {
   dateTo: dateFilter.bind(null, false),
   who: authorFilter,
   what: textFilter,
+  reactionFrom: reactionFilter,
 };
 const FILTER_ABORT = {};
 
@@ -305,5 +306,27 @@ function dateFilter(isFrom, ctx, queryDate) {
     } else {
       return ansDate <= queryDate;
     }
+  };
+}
+
+function reactionFilter(ctx, username) {
+  username = "@" + username.replace("@", "").toLowerCase();
+
+  async function checkList(ansUrl, listPath) {
+    for await (const u of ctx.fetchItems(
+      ansUrl + listPath,
+      ".userName:nth-child(2)"
+    )) {
+      if (u.textContent.toLowerCase() === username) return true;
+    }
+    return false;
+  }
+
+  return async (ans) => {
+    const ansUrl = ans.querySelector("a.streamItem_meta").getAttribute("href");
+    // Fetch in parallel.
+    const likes = checkList(ansUrl, "/fans/likes");
+    const rewards = checkList(ansUrl, "/fans/rewards");
+    return (await likes) || (await rewards);
   };
 }
