@@ -28,9 +28,16 @@ setup();
 
 function setup() {
   window.addEventListener("hashchange", (e) => syncUrlToForm(e.newURL));
-  FORM_ELEM.onsubmit = handleClick;
+  FORM_ELEM.addEventListener("submit", handleClick);
   FORM_ELEM.dateFrom.addEventListener("input", adjustDates);
   FORM_ELEM.dateTo.addEventListener("input", adjustDates);
+
+  FORM_ELEM.querySelectorAll("[autocomplete='username']").forEach((el) =>
+    el.addEventListener(
+      "invalid",
+      (e) => (e.target.value = normalizeUsername(e.target.value))
+    )
+  );
 
   syncUrlToForm(window.location);
   adjustDates();
@@ -58,20 +65,31 @@ function adjustDates() {
   }
 }
 
+function normalizeUsername(name) {
+  let match = name.match(/^https?:\/\/ask\.fm\/([a-zA-Z0-9_]+)(\/.*)?$/);
+  if (match) return match[1];
+  match = name.match(/^@?([a-zA-Z0-9_]+)$/);
+  if (match) return match[1];
+  return name;
+}
+
+function* getFormElems() {
+  for (const el of FORM_ELEM.elements) {
+    if (el.name) {
+      // Assume there are no nested spoilers.
+      const spoiler = el.closest("#form details");
+      yield [el, spoiler];
+    }
+  }
+}
+
 function syncUrlToForm(url) {
   url = new URL(url);
   const params = new URLSearchParams(url.hash.substr(1));
 
-  for (const el of FORM_ELEM.elements) {
-    if (el.name) {
-      const val = params.get(el.name);
-      el.value = val;
-
-      // Open the spoler if there's one and the value is valid.
-      // Assume there are no nested spoilers.
-      const spoiler = el.closest("#form details");
-      if (spoiler && el.value) spoiler.open = true;
-    }
+  for (const [el, spoiler] of getFormElems()) {
+    el.value = params.get(el.name);
+    if (spoiler && el.value) spoiler.open = true;
   }
 
   // Normalize the URL.
@@ -100,19 +118,15 @@ function syncFormToUrl(formData) {
 }
 
 function getFormData() {
+  FORM_ELEM.checkValidity();
   const data = {};
-  for (const el of FORM_ELEM.elements) {
-    const spoiler = el.closest("#form details");
-    // Ignore unnamed/invalid elems and closed spoilers.
-    if (
-      el.name &&
-      el.value &&
-      el.checkValidity() &&
-      (!spoiler || spoiler.open)
-    ) {
+
+  for (const [el, spoiler] of getFormElems()) {
+    if (el.value && el.validity.valid && (!spoiler || spoiler.open)) {
       data[el.name] = el.value;
     }
   }
+
   return data;
 }
 
@@ -169,7 +183,7 @@ class SearchContext {
     FORM_ELEM.classList.add("busy");
     showMessage("Начинаем поиск...");
     this.prepareFilters(formData);
-    this.username = formData["where"].replace("@", "");
+    this.username = formData["where"];
 
     for await (const ans of this.fetchItems(
       this.username,
@@ -264,12 +278,12 @@ class SearchContext {
 }
 
 function authorFilter(ctx, username) {
-  username = "/" + username.replace("@", "").toLowerCase();
+  username = "/" + username.toLowerCase();
 
   return (ans) => {
     const elem = ans.querySelector(".author");
     if (!elem) return false;
-    return elem.href.toLowerCase() === username;
+    return elem.getAttribute("href").toLowerCase() === username;
   };
 }
 
@@ -310,7 +324,7 @@ function dateFilter(isFrom, ctx, queryDate) {
 }
 
 function reactionFilter(ctx, username) {
-  username = "@" + username.replace("@", "").toLowerCase();
+  username = "@" + username.toLowerCase();
 
   async function checkList(ansUrl, listPath) {
     for await (const u of ctx.fetchItems(

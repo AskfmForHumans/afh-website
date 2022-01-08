@@ -143,7 +143,7 @@ details[open] > summary::before {
 
 .username {
   min-width: 200px;
-  flex-basis: 200px; /* Chrome worls correctly without this ¯\_(ツ)_/¯ */
+  flex-basis: 200px; /* Chrome works correctly without this ¯\_(ツ)_/¯ */
 }
 
 .resize {
