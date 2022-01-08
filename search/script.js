@@ -22,10 +22,7 @@ const FILTERS = {
 };
 const FILTER_ABORT = {};
 
-let gAbortController = new AbortController();
-let gNumFetched = 0,
-  gNumShown = 0;
-
+let gCurSearch = null;
 setup();
 
 function setup() {
@@ -118,124 +115,164 @@ function getFormData() {
   return data;
 }
 
-function handleClick(event) {
+async function handleClick(event) {
   event.preventDefault();
-  if (FORM_ELEM.classList.contains("busy")) {
-    abortSearch();
-    showStats("Поиск ответов прерван");
-  } else {
-    const formData = getFormData();
-    syncFormToUrl(formData);
-    if (FORM_ELEM.reportValidity()) {
-      startSearch(formData).catch(handleError);
+
+  try {
+    if (gCurSearch) {
+      gCurSearch.showStats("Поиск ответов прерван");
+    } else {
+      const formData = getFormData();
+      syncFormToUrl(formData);
+      if (FORM_ELEM.reportValidity()) {
+        gCurSearch = new SearchContext();
+        await gCurSearch.doSearch(formData);
+      }
     }
+  } catch (e) {
+    handleError(e);
+  } finally {
+    finishSearch();
   }
-}
-
-async function startSearch(formData) {
-  // Abort previous search and clean up.
-  abortSearch();
-  RESULTS_ELEM.replaceChildren();
-  gNumFetched = gNumShown = 0;
-
-  // Prepare.
-  gAbortController = new AbortController();
-  FORM_ELEM.classList.add("busy");
-
-  // Run.
-  showMessage("Начинаем поиск...");
-  await doSearch(formData);
-  abortSearch(); // search has finished, but we need to adjust styles
-  showStats("Поиск ответов завершён");
-}
-
-function abortSearch() {
-  gAbortController.abort();
-  FORM_ELEM.classList.remove("busy");
 }
 
 function handleError(e) {
-  abortSearch();
-  if (e instanceof SearchError) {
-    showMessage(e.message, "", true);
-  } else if (e.name !== "AbortError") {
-    showMessage("Упс, что-то пошло не так :(", "", true);
-    throw e;
+  if (e.name !== "AbortError") {
+    const msg = e.humanMessage || "Упс, что-то пошло не так :(";
+    showMessage(msg, "", true);
+    throw e; // let it show up in the console
   }
 }
 
-function showStats(state) {
-  showMessage(`${state}:`, `обработано ${gNumFetched}, показано ${gNumShown}`);
+function finishSearch() {
+  if (gCurSearch) gCurSearch.abCont.abort();
+  gCurSearch = null;
+  FORM_ELEM.classList.remove("busy");
 }
 
 function showMessage(part1, part2 = "", isError = false) {
   MESSAGE_ELEM.classList.toggle("error", isError);
-  MESSAGE_ELEM.replaceChildren(
-    `${part1} `,
-    document.createElement("br"),
-    part2
-  );
+  MESSAGE_ELEM.replaceChildren(part1, " ", document.createElement("br"), part2);
 }
 
-async function doSearch(formData) {
-  const filters = prepareFilters(formData);
-  const where = formData["where"].replace("@", "");
-
-  for await (let ans of fetchAnswers(where, gAbortController.signal)) {
-    const res = processAnswer(ans, filters);
-    showStats("Идёт поиск ответов");
-    if (res === FILTER_ABORT) break;
-  }
-}
-
-function processAnswer(ans, filters) {
-  for (const filter of filters) {
-    const res = filter(ans);
-    if (res === FILTER_ABORT) return FILTER_ABORT;
-    if (!res) return false;
+class SearchContext {
+  constructor() {
+    this.numFetched = this.numShown = 0;
+    this.abCont = new AbortController();
+    this.filters = [];
   }
 
-  RESULTS_ELEM.append(postProcessAnswer(ans));
-  gNumShown++;
-  return true;
-}
+  async doSearch(formData) {
+    // Clean up and prepare.
+    RESULTS_ELEM.replaceChildren();
+    FORM_ELEM.classList.add("busy");
+    showMessage("Начинаем поиск...");
+    this.prepareFilters(formData);
+    this.username = formData["where"].replace("@", "");
 
-function postProcessAnswer(ans) {
-  ans.classList.remove("shorten");
-  ans.querySelectorAll("a[href='#']").forEach((el) => {
-    el.href = "javascript:void(0)";
-  });
-  ans.querySelectorAll("a[href^='/']").forEach((el) => {
-    el.href = HOST + el.getAttribute("href");
-  });
-  ans.querySelectorAll("time").forEach((el) => {
-    el.textContent = new Date(el.dateTime + "Z").toLocaleString();
-    el.removeAttribute("title");
-  });
-  return ans;
-}
+    for await (const ans of this.fetchItems(
+      this.username,
+      ".streamItem-answer"
+    )) {
+      if ((await this.processAnswer(ans)) === FILTER_ABORT) break;
+      this.showStats("Идёт поиск ответов");
+    }
 
-function prepareFilters(formData) {
-  const filters = [];
-  // Make sure we add filters preserving their order.
-  for (const key of Object.keys(FILTERS)) {
-    if (formData[key]) {
-      filters.push(FILTERS[key](formData[key]));
+    this.showStats("Поиск ответов завершён");
+  }
+
+  prepareFilters(formData) {
+    // Make sure we add filters preserving their order.
+    for (const key of Object.keys(FILTERS)) {
+      if (formData[key]) {
+        this.filters.push(FILTERS[key](this, formData[key]));
+      }
     }
   }
-  return filters;
+
+  showStats(state) {
+    showMessage(
+      `${state}:`,
+      `обработано ${this.numFetched}, показано ${this.numShown}`
+    );
+  }
+
+  async processAnswer(ans) {
+    this.numFetched++;
+    for (const filter of this.filters) {
+      const res = await filter(ans);
+      if (res === FILTER_ABORT) return FILTER_ABORT;
+      if (!res) return false;
+    }
+
+    RESULTS_ELEM.append(this.postProcessAnswer(ans));
+    this.numShown++;
+    return true;
+  }
+
+  postProcessAnswer(ans) {
+    ans.classList.remove("shorten");
+    ans.querySelectorAll("a[href='#']").forEach((el) => {
+      el.href = "javascript:void(0)";
+    });
+    ans.querySelectorAll("a[href^='/']").forEach((el) => {
+      el.href = HOST + el.getAttribute("href");
+    });
+    ans.querySelectorAll("time").forEach((el) => {
+      el.textContent = new Date(el.dateTime + "Z").toLocaleString();
+      el.removeAttribute("title");
+    });
+    return ans;
+  }
+
+  async *fetchItems(nextUrl, selector) {
+    while (nextUrl && !this.abCont.signal.aborted) {
+      const html = await this.fetchHtml(nextUrl);
+      yield* html.querySelectorAll(selector);
+
+      const nextLink = html.querySelector(".item-page-next");
+      nextUrl = nextLink && nextLink.getAttribute("href");
+    }
+  }
+
+  async fetchHtml(url) {
+    url = new URL(url, HOST);
+    console.log(`Fetching ${url}...`);
+
+    const resp = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`, {
+      signal: this.abCont.signal,
+      headers: {
+        // Fetch only content, not the full page.
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    });
+
+    if (!resp.ok) {
+      const e = new Error(`Fetch status ${resp.status}: ${resp.statusText}`);
+      if (resp.status === 404) {
+        const userUrl = new URL(this.username, HOST);
+        e.humanMessage = `Пользователь ${userUrl} не найден!`;
+      }
+      throw e;
+    }
+
+    const htmlString = await resp.text();
+    const htmlDoc = new DOMParser().parseFromString(htmlString, "text/html");
+    return htmlDoc.body;
+  }
 }
 
-function authorFilter(username) {
-  username = username.replace("@", "").toLowerCase();
+function authorFilter(ctx, username) {
+  username = "/" + username.replace("@", "").toLowerCase();
+
   return (ans) => {
     const elem = ans.querySelector(".author");
     if (!elem) return false;
-    return elem.href.toLowerCase() === `/${username}`;
+    return elem.href.toLowerCase() === username;
   };
 }
 
-function textFilter(text) {
+function textFilter(ctx, text) {
   // Localized case-insensitive search is so hard in JS :(
   // See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#escaping
   text = text.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -250,13 +287,9 @@ function textFilter(text) {
   };
 }
 
-function dateFilter(isFrom, queryDate) {
+function dateFilter(isFrom, ctx, queryDate) {
   queryDate = new Date(queryDate); // in local time
-  if (isFrom) {
-    queryDate.setHours(0, 0, 0, 0); // midnight / start of the day
-  } else {
-    queryDate.setHours(24, 0, 0, 0); // next midnight / end of the day
-  }
+  queryDate.setHours(0, 0, 0, 0);
 
   return (ans) => {
     const dateEl = ans.querySelector("time");
@@ -265,6 +298,7 @@ function dateFilter(isFrom, queryDate) {
     // This date is in UTC.
     // ASKfm currently doesn't add this Z.
     const ansDate = new Date(dateEl.dateTime + "Z");
+    ansDate.setHours(0, 0, 0, 0);
 
     if (isFrom) {
       return ansDate >= queryDate ? true : FILTER_ABORT;
@@ -273,42 +307,3 @@ function dateFilter(isFrom, queryDate) {
     }
   };
 }
-
-async function* fetchAnswers(username, signal) {
-  let nextUrl = `/${username}`;
-  while (nextUrl && !signal.aborted) {
-    const html = await fetchHtml(`${HOST}${nextUrl}`, signal);
-    const chunk = Array.from(html.querySelectorAll(".streamItem-answer"));
-    gNumFetched += chunk.length;
-    yield* chunk;
-
-    const nextLink = html.querySelector(".item-page-next");
-    nextUrl = nextLink && nextLink.getAttribute("href");
-  }
-}
-
-async function fetchHtml(url, signal) {
-  console.log(`Fetching ${url}...`);
-
-  const resp = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`, {
-    signal,
-    headers: {
-      // Fetch only answers, not the full page.
-      "X-Requested-With": "XMLHttpRequest",
-    },
-  });
-
-  if (resp.status === 404) {
-    throw new SearchError(`Пользователь ${url} не найден!`);
-  }
-
-  if (!resp.ok) {
-    throw new Error(`Fetch status ${resp.status}: ${resp.statusText}`);
-  }
-
-  const htmlString = await resp.text();
-  const htmlDoc = new DOMParser().parseFromString(htmlString, "text/html");
-  return htmlDoc.body;
-}
-
-class SearchError extends Error {}
