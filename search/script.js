@@ -52,6 +52,8 @@ function setupShadow() {
   return shadow;
 }
 
+// === Form ===
+
 function adjustDates() {
   const dateFrom = FORM_ELEM.dateFrom;
   const dateTo = FORM_ELEM.dateTo;
@@ -130,6 +132,8 @@ function getFormData() {
   return data;
 }
 
+// === Dispatch ===
+
 async function handleClick(event) {
   event.preventDefault();
 
@@ -170,6 +174,8 @@ function showMessage(part1, part2 = "", isError = false) {
   MESSAGE_ELEM.replaceChildren(part1, " ", document.createElement("br"), part2);
 }
 
+// === Search ===
+
 class SearchContext {
   constructor() {
     this.numFetched = this.numShown = 0;
@@ -185,11 +191,17 @@ class SearchContext {
     this.prepareFilters(formData);
     this.username = formData["where"];
 
-    for await (const ans of this.fetchItems(
-      this.username,
-      ".streamItem-answer"
-    )) {
-      if ((await this.processAnswer(ans)) === FILTER_ABORT) break;
+    const stream = concMap(
+      this.fetchItems(this.username, ".streamItem-answer"),
+      (ans) => this.processAnswer(ans),
+      { concLimit: 25 }
+    );
+    for await (const res of Wrapper.unwrapAsyncIter(stream)) {
+      if (res === FILTER_ABORT) break;
+      if (res !== false) {
+        RESULTS_ELEM.append(this.postProcessAnswer(res));
+        this.numShown++;
+      }
       this.showStats("Идёт поиск ответов");
     }
 
@@ -216,13 +228,9 @@ class SearchContext {
     this.numFetched++;
     for (const filter of this.filters) {
       const res = await filter(ans);
-      if (res === FILTER_ABORT) return FILTER_ABORT;
-      if (!res) return false;
+      if (res !== true) return res;
     }
-
-    RESULTS_ELEM.append(this.postProcessAnswer(ans));
-    this.numShown++;
-    return true;
+    return ans;
   }
 
   postProcessAnswer(ans) {
@@ -276,6 +284,8 @@ class SearchContext {
     return htmlDoc.body;
   }
 }
+
+// === Filters ===
 
 function authorFilter(ctx, username) {
   username = "/" + username.toLowerCase();
@@ -343,4 +353,140 @@ function reactionFilter(ctx, username) {
     const rewards = checkList(ansUrl, "/fans/rewards");
     return (await likes) || (await rewards);
   };
+}
+
+// === Utils ===
+
+class CondVar {
+  async wait() {
+    try {
+      return await new Promise((res, rej) => {
+        this._resolve = res;
+        this._reject = rej;
+      });
+    } finally {
+      this._resolve = null;
+      this._reject = null;
+    }
+  }
+
+  resolve(value) {
+    if (this._resolve) this._resolve(value);
+  }
+
+  reject(value) {
+    if (this._reject) this._reject(value);
+  }
+}
+
+class Wrapper {
+  constructor(value) {
+    // avoid unhandled rejections
+    // if (Object(value).constructor === Promise) value.catch(() => {});
+    this.value = value;
+  }
+
+  static isWrapped(obj) {
+    return Object(obj).constructor === this;
+  }
+
+  static wrap(obj) {
+    return this.isWrapped(obj) ? obj : new this(obj);
+  }
+
+  static unwrap(obj) {
+    return this.isWrapped(obj) ? obj.value : obj;
+  }
+
+  static async *unwrapAsyncIter(iterable) {
+    for await (const item of iterable) {
+      yield this.unwrap(item);
+    }
+  }
+
+  static mapAsync(obj, func) {
+    return this.wrap(this._map(obj, func));
+  }
+
+  static async _map(obj, func) {
+    return func(await this.unwrap(obj));
+  }
+}
+
+async function* concMap(
+  iterable,
+  func,
+  {
+    concLimit = Number.POSITIVE_INFINITY,
+    bufLimit = Math.min(concLimit * 2, 100),
+  } = {}
+) {
+  if (
+    !(
+      (Number.isSafeInteger(concLimit) ||
+        concLimit === Number.POSITIVE_INFINITY) &&
+      concLimit >= 1
+    )
+  )
+    throw new TypeError("concLimit must be > 0");
+  if (!(Number.isSafeInteger(bufLimit) && bufLimit >= 1))
+    throw new TypeError("bufLimit must be > 0 and finite");
+
+  let waitEmpty = new CondVar();
+  let waitConcLimit = new CondVar();
+  let waitBufLimit = new CondVar();
+
+  const buf = new Array(bufLimit);
+  let lo = (hi = 0);
+  let done = false;
+  let pendingError;
+
+  // Pull and map items.
+  consumer().catch(onError);
+
+  // Push results to the consumer.
+  while (true) {
+    if (pendingError !== undefined) throw pendingError;
+    if (done) break;
+    if (lo === hi) await waitEmpty.wait();
+
+    yield buf[lo % bufLimit];
+    lo++;
+    waitBufLimit.resolve();
+  }
+
+  async function consumer() {
+    for await (let item of iterable) {
+      item = Wrapper.mapAsync(item, func);
+      // Using finally would result in unhandled rejections :(
+      item.value.then(onSettled, onSettled);
+
+      buf[hi % bufLimit] = item;
+      concLimit--;
+      hi++;
+      waitEmpty.resolve();
+
+      // These lines can be executed serially and without a loop
+      // because the only code that can make these conditions falsy
+      // after they become true is above.
+      if (concLimit === 0) await waitConcLimit.wait();
+      if (hi - lo === bufLimit) await waitBufLimit.wait();
+    }
+
+    done = true;
+  }
+
+  function onSettled() {
+    try {
+      concLimit++;
+      waitConcLimit.resolve();
+    } catch (e) {
+      onError(e);
+    }
+  }
+
+  function onError(e) {
+    pendingError = e;
+    waitEmpty.reject(e);
+  }
 }

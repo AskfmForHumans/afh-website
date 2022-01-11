@@ -17,7 +17,7 @@
     </div>
 
     <main>
-      <section class="panel">
+      <section>
         <form class="flex col" id="form" novalidate>
           <h1>
             Найдём все ответы <mark>user1</mark> на вопросы от
@@ -88,9 +88,9 @@
               <summary>
                 <mark>Помощь</mark>
               </summary>
-              <ul>
+              <ul class="flex col dense small">
                 <li>
-                  Примеры того, что можно использовать в качестве юзернейма:
+                  Что можно использовать в качестве юзернейма:
                   <ul>
                     <li><code>jgrdlgrd</code></li>
                     <li><code>@jgrdlgrd</code></li>
@@ -98,18 +98,26 @@
                   </ul>
                 </li>
                 <li>
-                  Поиск по тексту выполняется в вопросах и ответах (без учёта
-                  регистра).
+                  Поиск по тексту выполняется в вопросах и ответах без учёта
+                  регистра.
                 </li>
-                <li>Поиск по лайкам работает очень медленно.</li>
+                <li>
+                  Если что-то непонятно / не работает — напиши мне!
+                  <ul>
+                    <li><a href="discuss">на этом сайте в комментариях</a></li>
+                    <li>
+                      на Аске:
+                      <a href="https://ask.fm/jgrdlgrd">@jgrdlgrd</a>
+                    </li>
+                  </ul>
+                </li>
               </ul>
             </details>
           </div>
 
           <div class="flex nogrow">
-            <p id="message">
-              ASKfm answer search <br />
-              by <a href="https://ask.fm/ask4humans">@ask4humans</a>
+            <p id="message" class="small">
+              Answer search by <br /><a href="/">#AskfmForHumans</a>
             </p>
             <button type="submit" class="icon-submit"></button>
           </div>
